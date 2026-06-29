@@ -7,7 +7,7 @@ import TabNavigation from './components/TabNavigation'
 import AuthButton from './components/AuthButton'
 import PantrySection from './components/PantrySection'
 import RecipesSection from './components/RecipesSection'
-import ExercisesSection from './components/ExercisesSection'
+import WeeklyPlanner from './components/WeeklyPlanner'
 import FavoritesSection from './components/FavoritesSection'
 import PreferencesModal from './components/PreferencesModal'
 
@@ -23,8 +23,8 @@ const HERO = {
     subtitle: 'Recetas a partir de tu despensa, tus utensilios y tus gustos.',
   },
   rutinas: {
-    title: 'Entrena donde quieras',
-    subtitle: 'Rutinas según los músculos que elijas y tu equipamiento de casa o gimnasio.',
+    title: 'Tu rutina semanal',
+    subtitle: 'Monta el entreno de cada día con sus series, repeticiones y pesos.',
   },
   favoritos: {
     title: 'Tu colección',
@@ -41,7 +41,6 @@ function AppShell() {
   const [prefsOpen, setPrefsOpen] = useState(false)
 
   const [recipeResults, setRecipeResults] = useState(EMPTY_RESULTS)
-  const [exerciseResults, setExerciseResults] = useState(EMPTY_RESULTS)
 
   // Onboarding: abrimos el panel de gustos la primera vez (una sola vez).
   const promptedRef = useRef(false)
@@ -64,7 +63,6 @@ function AppShell() {
   }
 
   const favoriteRecipeIds = data.favoriteRecipes.map((r) => r.id)
-  const favoriteExerciseIds = data.favoriteExercises.map((e) => e.id)
   const hero = HERO[activeTab]
 
   return (
@@ -148,15 +146,7 @@ function AppShell() {
               )}
 
               {activeTab === 'rutinas' && (
-                <ExercisesSection
-                  equipment={data.equipment}
-                  muscles={data.muscles}
-                  onUpdate={update}
-                  favoriteIds={favoriteExerciseIds}
-                  onToggleFavorite={toggleFavoriteExercise}
-                  results={exerciseResults}
-                  setResults={setExerciseResults}
-                />
+                <WeeklyPlanner weeklyPlan={data.weeklyPlan} onUpdate={update} />
               )}
 
               {activeTab === 'favoritos' && (

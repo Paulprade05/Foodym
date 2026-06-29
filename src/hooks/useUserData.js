@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase, isSupabaseConfigured } from '../supabase/config'
+import { EMPTY_PLAN } from '../constants/days'
 
 // Datos del usuario, sincronizados entre dispositivos (Supabase) o en localStorage.
 const LOCAL_KEY = 'foodym_user_data'
@@ -18,6 +19,7 @@ const EMPTY = {
   equipment: [],
   muscles: [],
   preferences: { ...EMPTY_PREFERENCES },
+  weeklyPlan: { ...EMPTY_PLAN },
   favoriteRecipes: [],
   favoriteExercises: [],
   onboarded: false,
@@ -28,6 +30,7 @@ function normalize(raw = {}) {
     ...EMPTY,
     ...raw,
     preferences: { ...EMPTY_PREFERENCES, ...(raw.preferences || {}) },
+    weeklyPlan: { ...EMPTY_PLAN, ...(raw.weeklyPlan || {}) },
   }
 }
 
