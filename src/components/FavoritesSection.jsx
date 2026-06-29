@@ -8,26 +8,26 @@ export default function FavoritesSection({
   favoriteExercises,
   onToggleFavoriteRecipe,
   onToggleFavoriteExercise,
-  firebaseEnabled,
+  cloudEnabled,
   isLoggedIn,
 }) {
   const empty = favoriteRecipes.length === 0 && favoriteExercises.length === 0
 
   let banner
-  if (firebaseEnabled && isLoggedIn) {
+  if (cloudEnabled && isLoggedIn) {
     banner = {
       Icon: Cloud,
       text: 'Tus favoritos se sincronizan automáticamente en todos tus dispositivos.',
     }
-  } else if (firebaseEnabled) {
+  } else if (cloudEnabled) {
     banner = {
       Icon: Lock,
-      text: 'Inicia sesión con Google para guardar tus favoritos y sincronizarlos entre dispositivos. De momento se guardan solo en este navegador.',
+      text: 'Inicia sesión con tu correo para guardar tus favoritos y sincronizarlos entre dispositivos. De momento se guardan solo en este navegador.',
     }
   } else {
     banner = {
       Icon: HardDrive,
-      text: 'Modo local: tus favoritos se guardan en este navegador. Configura Firebase (ver README) para sincronizarlos.',
+      text: 'Modo local: tus favoritos se guardan en este navegador. Configura Supabase (ver README) para sincronizarlos.',
     }
   }
 

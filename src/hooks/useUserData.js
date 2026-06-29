@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '../firebase/config'
+import { supabase, isSupabaseConfigured } from '../supabase/config'
 
-// Datos del usuario que se sincronizan entre dispositivos (o en localStorage).
+// Datos del usuario, sincronizados entre dispositivos (Supabase) o en localStorage.
 const LOCAL_KEY = 'foodym_user_data'
 
 const EMPTY_PREFERENCES = {
@@ -24,7 +23,6 @@ const EMPTY = {
   onboarded: false,
 }
 
-// Normaliza para garantizar que existen todos los campos (datos antiguos, etc.).
 function normalize(raw = {}) {
   return {
     ...EMPTY,
@@ -59,25 +57,45 @@ export function useUserData(user) {
   }, [data])
 
   useEffect(() => {
-    if (isFirebaseConfigured && user) {
-      const ref = doc(db, 'users', user.uid)
-      let firstSnapshot = true
-      const unsubscribe = onSnapshot(
-        ref,
-        (snap) => {
-          if (snap.exists()) {
-            setData(normalize(snap.data()))
-          } else if (firstSnapshot) {
+    if (isSupabaseConfigured && user) {
+      let alive = true
+
+      // Carga inicial de la fila del usuario.
+      supabase
+        .from('user_data')
+        .select('data')
+        .eq('user_id', user.id)
+        .maybeSingle()
+        .then(({ data: row }) => {
+          if (!alive) return
+          if (row?.data) {
+            setData(normalize(row.data))
+          } else {
+            // Primera vez: subimos a la nube lo que hubiera en local.
             const local = readLocal()
             setData(local)
-            setDoc(ref, { ...local, updatedAt: serverTimestamp() }).catch(() => {})
+            supabase.from('user_data').upsert({ user_id: user.id, data: local }).then(() => {})
           }
-          firstSnapshot = false
-        },
-        () => setData(readLocal()),
-      )
-      return unsubscribe
+        })
+
+      // Sincronización en tiempo real entre dispositivos.
+      const channel = supabase
+        .channel(`user_data_${user.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'user_data', filter: `user_id=eq.${user.id}` },
+          (payload) => {
+            if (payload.new?.data) setData(normalize(payload.new.data))
+          },
+        )
+        .subscribe()
+
+      return () => {
+        alive = false
+        supabase.removeChannel(channel)
+      }
     }
+
     setData(readLocal())
     return undefined
   }, [user])
@@ -86,14 +104,13 @@ export function useUserData(user) {
     (next) => {
       setData(next)
       dataRef.current = next
-      if (isFirebaseConfigured && user) {
+      if (isSupabaseConfigured && user) {
         clearTimeout(saveTimer.current)
         saveTimer.current = setTimeout(() => {
-          setDoc(
-            doc(db, 'users', user.uid),
-            { ...next, updatedAt: serverTimestamp() },
-            { merge: true },
-          ).catch(() => {})
+          supabase
+            .from('user_data')
+            .upsert({ user_id: user.id, data: next })
+            .then(() => {})
         }, 500)
       } else {
         writeLocal(next)

@@ -18,7 +18,7 @@ export default defineConfig({
         // Separamos las librerías grandes para acelerar la carga inicial.
         manualChunks: {
           react: ['react', 'react-dom'],
-          firebase: ['firebase/app', 'firebase/auth', 'firebase/firestore'],
+          supabase: ['@supabase/supabase-js'],
           motion: ['framer-motion'],
         },
       },

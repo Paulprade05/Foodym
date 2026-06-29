@@ -1,6 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react'
-import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
-import { auth, googleProvider, isFirebaseConfigured } from '../firebase/config'
+import { supabase, isSupabaseConfigured } from '../supabase/config'
 
 const AuthContext = createContext(null)
 
@@ -8,37 +7,49 @@ export const useAuth = () => useContext(AuthContext)
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
-  // Si Firebase no está configurado, no hay nada que cargar.
-  const [loading, setLoading] = useState(isFirebaseConfigured)
+  const [loading, setLoading] = useState(isSupabaseConfigured)
   const [authError, setAuthError] = useState('')
+  const [magicLinkSentTo, setMagicLinkSentTo] = useState('')
 
   useEffect(() => {
-    if (!isFirebaseConfigured) {
+    if (!isSupabaseConfigured) {
       setLoading(false)
       return
     }
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser)
+    // Sesión actual (si volvió del enlace mágico, ya estará disponible).
+    supabase.auth.getSession().then(({ data }) => {
+      setUser(data.session?.user ?? null)
       setLoading(false)
     })
-    return unsubscribe
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null)
+    })
+    return () => sub.subscription.unsubscribe()
   }, [])
 
-  const signInWithGoogle = async () => {
-    if (!isFirebaseConfigured) return
+  // Envía un enlace mágico al correo indicado.
+  const signInWithEmail = async (email) => {
+    if (!isSupabaseConfigured) return
     setAuthError('')
-    try {
-      await signInWithPopup(auth, googleProvider)
-    } catch (err) {
-      if (err?.code === 'auth/popup-closed-by-user') return // el usuario cerró la ventana
-      setAuthError('No se pudo iniciar sesión con Google. Inténtalo de nuevo.')
+    const clean = (email || '').trim()
+    if (!clean) return
+    const { error } = await supabase.auth.signInWithOtp({
+      email: clean,
+      options: { emailRedirectTo: window.location.href.split('#')[0] },
+    })
+    if (error) {
+      setAuthError('No se pudo enviar el enlace. Revisa el correo e inténtalo de nuevo.')
+      return
     }
+    setMagicLinkSentTo(clean)
   }
 
+  const clearMagicLink = () => setMagicLinkSentTo('')
+
   const signOutUser = async () => {
-    if (!isFirebaseConfigured) return
+    if (!isSupabaseConfigured) return
     try {
-      await signOut(auth)
+      await supabase.auth.signOut()
     } catch {
       /* ignoramos errores de cierre de sesión */
     }
@@ -47,10 +58,12 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
-    firebaseEnabled: isFirebaseConfigured,
-    signInWithGoogle,
+    enabled: isSupabaseConfigured,
+    signInWithEmail,
     signOutUser,
     authError,
+    magicLinkSentTo,
+    clearMagicLink,
   }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

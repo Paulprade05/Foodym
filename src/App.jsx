@@ -28,7 +28,7 @@ const HERO = {
 }
 
 function AppShell() {
-  const { user, firebaseEnabled, authError } = useAuth()
+  const { user, enabled: cloudEnabled, authError } = useAuth()
   const { data, update, updatePreferences, toggleFavoriteRecipe, toggleFavoriteExercise } =
     useUserData(user)
 
@@ -152,7 +152,7 @@ function AppShell() {
                   favoriteExercises={data.favoriteExercises}
                   onToggleFavoriteRecipe={toggleFavoriteRecipe}
                   onToggleFavoriteExercise={toggleFavoriteExercise}
-                  firebaseEnabled={firebaseEnabled}
+                  cloudEnabled={cloudEnabled}
                   isLoggedIn={Boolean(user)}
                 />
               )}
