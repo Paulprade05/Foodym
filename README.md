@@ -1,8 +1,8 @@
 # Foodym — Generador de Rutinas y Recetas
 
-Aplicación web (React + Vite + Tailwind CSS) con interfaz íntegra en español, login con
-Google, sincronización entre dispositivos (Firebase) y animaciones fluidas (Framer Motion).
-Iconografía con `lucide-react` (sin emojis).
+Aplicación web (React + Vite + Tailwind CSS) con interfaz íntegra en español, login por
+enlace mágico al correo, sincronización entre dispositivos (Supabase) y animaciones fluidas
+(Framer Motion). Iconografía con `lucide-react` (sin emojis).
 
 Tres secciones:
 
@@ -28,58 +28,58 @@ desde el botón "Mis gustos".
 
 - **Recetas:** clave de Spoonacular ya incluida en `.env`.
 - **Ejercicios:** base de datos libre, **sin clave**.
-- **Traducción de ingredientes:** API gratuita de MyMemory, **sin clave**.
-- **Datos del usuario:** se guardan en el navegador (modo local) hasta que conectes Firebase.
+- **Traducción de ingredientes:** Google Translate (gtx) / MyMemory, **sin clave**.
+- **Datos del usuario:** se guardan en el navegador (modo local) hasta que conectes Supabase.
 
 ```bash
 npm install
 npm run dev      # abre http://localhost:5173
 ```
 
-Para activar **login con Google + sincronización entre dispositivos**, configura Firebase
-(opcional) rellenando las variables `VITE_FIREBASE_*` del `.env`.
+Para activar **login + sincronización entre dispositivos**, configura Supabase (opcional)
+rellenando `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` del `.env`.
 
 ---
 
-## Configurar Firebase (opcional: login + sincronización)
+## Configurar Supabase (opcional: login + sincronización)
 
-1. [Consola de Firebase](https://console.firebase.google.com) → **Agregar proyecto**.
-2. **Authentication** → *Sign-in method* → habilita **Google**.
-3. **Firestore Database** → *Crear base de datos* → modo producción → elige región.
-4. En **Reglas** de Firestore (cada usuario solo accede a sus datos):
+1. Crea un proyecto en [supabase.com](https://supabase.com).
+2. **SQL Editor** → ejecuta esto (crea la tabla, la seguridad por fila y el tiempo real):
+   ```sql
+   create table if not exists public.user_data (
+     user_id uuid primary key references auth.users on delete cascade,
+     data jsonb not null default '{}',
+     updated_at timestamptz not null default now()
+   );
+   alter table public.user_data enable row level security;
+   create policy "own_data" on public.user_data
+     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+   alter publication supabase_realtime add table public.user_data;
    ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /users/{uid} {
-         allow read, write: if request.auth != null && request.auth.uid == uid;
-       }
-     }
-   }
-   ```
-5. **Project settings** (⚙️) → *Tus apps* → app **Web** (`</>`) → copia el `firebaseConfig` a
-   las variables `VITE_FIREBASE_*` del `.env`.
-6. **Authentication → Settings → Dominios autorizados**: añade `localhost` y tu dominio de
-   Vercel tras desplegar.
+3. **Authentication → Providers → Email**: deja activado *Email* (el enlace mágico funciona por
+   defecto; no hace falta contraseña).
+4. **Authentication → URL Configuration**: pon tu URL del sitio como *Site URL* y añádela a
+   *Redirect URLs* (p. ej. `https://paulprade05.github.io/Foodym/` y `http://localhost:5173`).
+5. **Settings → API**: copia *Project URL* y la clave *anon public* a `VITE_SUPABASE_URL` y
+   `VITE_SUPABASE_ANON_KEY` del `.env`.
 
-> En Vite las variables `VITE_*` viajan al navegador: no son secretas. Reinicia `npm run dev`
-> tras editar el `.env`.
+> La clave *anon* es pública por diseño (la seguridad la da el *Row Level Security* de la tabla).
+> Reinicia `npm run dev` tras editar el `.env`.
 
 ---
 
-## Publicar en Vercel
+## Publicación (GitHub Pages)
 
-`vercel.json` ya está configurado.
+La web está publicada en **https://paulprade05.github.io/Foodym/** mediante GitHub Actions
+([.github/workflows/deploy.yml](.github/workflows/deploy.yml)): cada `git push` a `main`
+recompila y republica automáticamente.
 
-```bash
-npm i -g vercel
-vercel login         # se abre el navegador para iniciar sesión (paso manual)
-vercel               # despliegue de prueba
-vercel --prod        # producción
-```
+Las claves se guardan como *Secrets* del repositorio (*Settings → Secrets and variables →
+Actions*): `VITE_SPOONACULAR_API_KEY` y, para login/sincronización, `VITE_SUPABASE_URL` y
+`VITE_SUPABASE_ANON_KEY`. Tras añadir o cambiar secrets, relanza el workflow (o haz un push).
 
-Añade las variables `VITE_*` en *Project → Settings → Environment Variables* (o `vercel env add`).
-Recuerda añadir el dominio final de Vercel a los dominios autorizados de Firebase Auth.
+Si configuras Supabase, añade `https://paulprade05.github.io/Foodym/` a las *Redirect URLs* de
+Supabase (Authentication → URL Configuration).
 
 ```bash
 npm run build     # build de producción en /dist
@@ -95,9 +95,9 @@ src/
 ├── App.jsx                      # Layout, barra superior, pestañas, transiciones, onboarding
 ├── main.jsx
 ├── index.css                   # Tailwind + utilidades (botones, panel, spinner)
-├── firebase/config.js           # Init Firebase con degradación a modo local
-├── context/AuthContext.jsx      # Sesión + login/logout con Google
-├── hooks/useUserData.js         # Datos: Firestore (sync) o localStorage; prefs y favoritos
+├── supabase/config.js           # Init Supabase con degradación a modo local
+├── context/AuthContext.jsx      # Sesión + login por enlace mágico (email)
+├── hooks/useUserData.js         # Datos: Supabase (sync) o localStorage; prefs y favoritos
 ├── constants/preferences.js     # Opciones de dieta/intolerancias/cocinas/tiempo
 ├── services/
 │   ├── spoonacular.js           # Recetas + utensilios + preferencias
@@ -127,9 +127,9 @@ src/
   para simular la animación, e incluye nivel, músculos, instrucciones y vídeo de YouTube.
 - **Errores:** todas las peticiones capturan fallos de red/API (401/402/429…) y muestran un
   mensaje claro con botón **Reintentar**, sin romper la app.
-- **Persistencia:** con sesión Google los datos viven en Firestore (`users/{uid}`) con escucha
-  en tiempo real; sin sesión, en `localStorage`. Al iniciar sesión por primera vez se migran los
-  datos locales a la nube.
+- **Persistencia:** con sesión iniciada los datos viven en Supabase (tabla `user_data`, una
+  fila por usuario con la seguridad por fila) y se sincronizan en tiempo real; sin sesión, en
+  `localStorage`. Al iniciar sesión por primera vez se migran los datos locales a la nube.
 - **Idioma:** todo se muestra en español. La interfaz y las etiquetas (músculo, equipamiento,
   nivel, dieta…) están traducidas de forma fija; los **nombres y las instrucciones de los
   ejercicios** y los **títulos de las recetas** (que las APIs devuelven en inglés) se traducen
