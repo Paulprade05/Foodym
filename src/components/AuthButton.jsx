@@ -146,7 +146,7 @@ export default function AuthButton() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="tu@correo.com"
-                    className="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                    className="mb-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-base outline-none transition focus:border-brand-400 focus:bg-white focus:ring-4 focus:ring-brand-100 sm:text-sm"
                   />
                   {authError && <p className="mb-2 text-xs text-rose-600">{authError}</p>}
                   <button type="submit" disabled={sending} className="btn-primary w-full">
