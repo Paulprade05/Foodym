@@ -1,8 +1,13 @@
 // Servicio para la API de Spoonacular.
 // Documentación: https://spoonacular.com/food-api/docs#Search-Recipes-Complex
 
+import { translateToEnglish } from './translate'
+
 const BASE_URL = 'https://api.spoonacular.com'
 const API_KEY = import.meta.env.VITE_SPOONACULAR_API_KEY
+
+// CDN de imágenes de ingredientes de Spoonacular.
+const INGREDIENT_IMG_BASE = 'https://img.spoonacular.com/ingredients_250x250/'
 
 // Utensilios de cocina seleccionables (id = valor del parámetro "equipment").
 export const KITCHEN_UTENSILS = [
@@ -84,4 +89,54 @@ export async function searchRecipes({
 
   const data = await res.json()
   return Array.isArray(data.results) ? data.results : []
+}
+
+// --- Imágenes de ingredientes para la despensa ---
+
+const IMG_CACHE_KEY = 'foodym_ingredient_images'
+let imgCache = (() => {
+  try {
+    return JSON.parse(localStorage.getItem(IMG_CACHE_KEY) || '{}')
+  } catch {
+    return {}
+  }
+})()
+function saveImgCache() {
+  try {
+    localStorage.setItem(IMG_CACHE_KEY, JSON.stringify(imgCache))
+  } catch {
+    /* ignoramos */
+  }
+}
+
+/**
+ * Respaldo: resuelve la imagen de un ingrediente con Spoonacular, pero SOLO si
+ * hay coincidencia exacta de nombre (evita imágenes erróneas tipo "pollo"->manteca).
+ * Se usa cuando TheMealDB no tiene imagen del ingrediente.
+ *
+ * @param {string} spanishName
+ * @returns {Promise<string|null>} URL de la imagen o null.
+ */
+export async function resolveIngredientImage(spanishName) {
+  const key = (spanishName || '').trim().toLowerCase()
+  if (!key) return null
+  if (key in imgCache) return imgCache[key] || null
+  if (!API_KEY) return null
+
+  try {
+    const english = (await translateToEnglish(key)).toLowerCase()
+    const params = new URLSearchParams({ apiKey: API_KEY, query: english, number: '10' })
+    const res = await fetch(`${BASE_URL}/food/ingredients/search?${params.toString()}`)
+    if (!res.ok) return null // fallo transitorio: no lo cacheamos, se reintentará
+    const data = await res.json()
+    const results = Array.isArray(data.results) ? data.results : []
+    // Solo aceptamos coincidencia exacta de nombre.
+    const exact = results.find((r) => (r.name || '').toLowerCase() === english)
+    const url = exact?.image ? INGREDIENT_IMG_BASE + exact.image : ''
+    imgCache[key] = url // cacheamos también "" (no encontrado) para no repetir
+    saveImgCache()
+    return url || null
+  } catch {
+    return null
+  }
 }

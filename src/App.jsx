@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { useUserData } from './hooks/useUserData'
 import TabNavigation from './components/TabNavigation'
 import AuthButton from './components/AuthButton'
+import PantrySection from './components/PantrySection'
 import RecipesSection from './components/RecipesSection'
 import ExercisesSection from './components/ExercisesSection'
 import FavoritesSection from './components/FavoritesSection'
@@ -13,6 +14,10 @@ import PreferencesModal from './components/PreferencesModal'
 const EMPTY_RESULTS = { items: [], loading: false, error: '', searched: false }
 
 const HERO = {
+  despensa: {
+    title: 'Tu despensa',
+    subtitle: 'Mira de un vistazo lo que tienes en casa, con la foto de cada producto.',
+  },
   recetas: {
     title: 'Cocina con lo que tienes',
     subtitle: 'Recetas a partir de tu despensa, tus utensilios y tus gustos.',
@@ -32,7 +37,7 @@ function AppShell() {
   const { data, update, updatePreferences, toggleFavoriteRecipe, toggleFavoriteExercise } =
     useUserData(user)
 
-  const [activeTab, setActiveTab] = useState('recetas')
+  const [activeTab, setActiveTab] = useState('despensa')
   const [prefsOpen, setPrefsOpen] = useState(false)
 
   const [recipeResults, setRecipeResults] = useState(EMPTY_RESULTS)
@@ -120,6 +125,14 @@ function AppShell() {
               exit={{ opacity: 0, y: -12 }}
               transition={{ duration: 0.22, ease: 'easeOut' }}
             >
+              {activeTab === 'despensa' && (
+                <PantrySection
+                  ingredients={data.ingredients}
+                  onUpdate={update}
+                  onGoToRecipes={() => setActiveTab('recetas')}
+                />
+              )}
+
               {activeTab === 'recetas' && (
                 <RecipesSection
                   ingredients={data.ingredients}

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
-import { UtensilsCrossed, Dumbbell, Heart } from 'lucide-react'
+import { UtensilsCrossed, Dumbbell, Heart, ShoppingBasket } from 'lucide-react'
 
 const TABS = [
+  { id: 'despensa', label: 'Despensa', Icon: ShoppingBasket },
   { id: 'recetas', label: 'Recetas', Icon: UtensilsCrossed },
   { id: 'rutinas', label: 'Rutinas', Icon: Dumbbell },
   { id: 'favoritos', label: 'Favoritos', Icon: Heart },
